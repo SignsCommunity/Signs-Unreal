@@ -12,3 +12,8 @@ Saved
 *.suo
 *.xcodeproj
 *.xcworkspace
+.idea/
+cmake-build-debug/
+cmake-build-release/
+Intermediate/ProjectFiles/*.cmake
+CMakeLists.txt
