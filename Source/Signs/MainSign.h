@@ -20,6 +20,8 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	void InitSignCoreAndTrail();
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -29,15 +31,25 @@ public:
 
 	float RunningTime;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SignBehaviour")
-	float Radius;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OrbitalBehaviour")
+	float OrbitalRadius;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SignBehaviour")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OrbitalBehaviour")
 	float AngularVelocity;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SignBehaviour")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OrbitalBehaviour")
 	float StartAngle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SignBehaviour")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OrbitalBehaviour")
 	float RelativeHeight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Appearance")
+	UStaticMeshComponent *SignCoreVisual;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Appearance")
+	UParticleSystemComponent *TrailParticleSystem;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Appearance")
+	float SignCoreInnerRadius;
+
 };
