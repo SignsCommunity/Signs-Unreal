@@ -10,6 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Materials/Material.h"
+#include "MainSign.h"
 #include "Engine/World.h"
 
 ASignsCharacter::ASignsCharacter()
@@ -55,6 +56,17 @@ ASignsCharacter::ASignsCharacter()
 	// Activate ticking in order to update the cursor every frame.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
+}
+
+void ASignsCharacter::SignFireInput() {
+
+	if (CursorToWorld != nullptr){
+		if (AMainSign* MS = Cast<AMainSign>(MainSign)){
+			MS->TryFire(CursorToWorld->GetComponentLocation() - GetActorLocation());
+		}
+		else UE_LOG(LogTemp, Error, TEXT("Actor is not AMainSign"));
+	}
+
 }
 
 void ASignsCharacter::Tick(float DeltaSeconds)

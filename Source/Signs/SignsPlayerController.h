@@ -38,6 +38,9 @@ protected:
 	/** Input handlers for SetDestination action. */
 	void OnSetDestinationPressed();
 	void OnSetDestinationReleased();
+
+	/** Called when player gives the "fire" command */
+	void SignFireInput();
 };
 
 

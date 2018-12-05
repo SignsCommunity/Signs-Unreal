@@ -24,6 +24,10 @@ public:
 	/** Returns CursorToWorld subobject **/
 	FORCEINLINE class UDecalComponent* GetCursorToWorld() { return CursorToWorld; }
 
+	/** Called when received input to fire from the Controller */
+	UFUNCTION(BlueprintCallable, Category = "SignMovement")
+	void SignFireInput();
+
 private:
 	/** Top down camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -36,5 +40,10 @@ private:
 	/** A decal that projects to the cursor location. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UDecalComponent* CursorToWorld;
+
+	/** The main sign that the player controls. */
+	UPROPERTY(EditAnywhere, Category = "Sign",  meta = (AllowPrivateAccess = "true"))
+	class AActor* MainSign;
+
 };
 

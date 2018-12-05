@@ -37,11 +37,22 @@ void ASignsPlayerController::SetupInputComponent()
 	InputComponent->BindTouch(EInputEvent::IE_Repeat, this, &ASignsPlayerController::MoveToTouchLocation);
 
 	InputComponent->BindAction("ResetVR", IE_Pressed, this, &ASignsPlayerController::OnResetVR);
+
+	InputComponent->BindAction("Fire", IE_Pressed, this, &ASignsPlayerController::SignFireInput);
 }
 
 void ASignsPlayerController::OnResetVR()
 {
 	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
+}
+
+void ASignsPlayerController::SignFireInput() {
+
+	if (ASignsCharacter* PlayerPawn = Cast<ASignsCharacter>(GetPawn())){
+
+		PlayerPawn->SignFireInput();
+	}
+	else UE_LOG(LogTemp, Error, TEXT("Pawn is not ASignsCharacter"));
 }
 
 void ASignsPlayerController::MoveToMouseCursor()
