@@ -9,14 +9,8 @@ AMainSign::AMainSign() {
     // Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
 
-	OrbitalRadius = 100.0f;
-	AngularVelocity = 3.0f;
-	RelativeHeight = 1.0f;
-	StartAngle = 0.0f;
+    InitVariables();
 
-	SignCoreInnerRadius = 10.0f;
-
-	MaxFiredTime = 2;
 	State = EStateEnum::ROTATING;
 
 	InitComponents();
@@ -26,7 +20,6 @@ AMainSign::AMainSign() {
 void AMainSign::BeginPlay() {
     Super::BeginPlay();
 
-	//RootComponent->GetChildComponent(0)->SetWorldScale3D(FVector(SignCoreInnerRadius / 50.0f));
 }
 
 // Called every frame
@@ -37,33 +30,73 @@ void AMainSign::Tick(float DeltaTime) {
 		ContinueOrbitalPath(DeltaTime);
     }
 
-}
-
-// Called to bind functionality to input
-void AMainSign::SetupPlayerInputComponent(UInputComponent *PlayerInputComponent) {
-    Super::SetupPlayerInputComponent(PlayerInputComponent);
-
+    if (State == EStateEnum::RETURNING){
+    	UpdateReturnPath(DeltaTime);
+    }
 }
 
 void AMainSign::TryFire(FVector Direction){
 
-    if (State != EStateEnum::FIRED){
+    if (State == EStateEnum::ROTATING){
 
     	State = EStateEnum::FIRED;
 
-    	//Velocity logic
+    	//Velocity fire logic
     	Direction.Z = 0;
     	Direction.Normalize();
     	MovementComponent->Velocity = Direction * MovementComponent->InitialSpeed;
-    	GetWorldTimerManager().SetTimer(FiredTimerHandle, this, &AMainSign::ReturnToOrbit, MaxFiredTime, false);
+    	GetWorldTimerManager().SetTimer(FiredTimerHandle, this, &AMainSign::ChangeState, MaxFiredTime, false);
     }
 
 }
 
-void AMainSign::ReturnToOrbit(){
+void AMainSign::ChangeState(){
 
-	MovementComponent->Velocity = FVector(0.0f, 0.0f, 0.0f);
-	State = EStateEnum::ROTATING;
+    if (State == EStateEnum::FIRED){
+        State = EStateEnum::RETURNING;
+    }
+    else if (State == EStateEnum::RETURNING){
+
+		FVector BaseVector = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation() - GetActorLocation();
+    	RunningTime = 0;
+		StartAngle = FMath::Atan2(BaseVector.Y, BaseVector.X) + PI;
+		MovementComponent->Velocity = FVector(0.0f, 0.0f, 0.0f);
+		CurrentReturnSpeedRatio = SpeedRatioTopBoundary;
+
+        State = EStateEnum::ROTATING;
+    }
+
+}
+
+void AMainSign::UpdateReturnPath(float DeltaTime) {
+
+	FVector BaseVector = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation() - GetActorLocation();
+	BaseVector.Z = 0;
+	float BaseVectorMagnitude = BaseVector.Size();
+
+	float TangentVectorMagnitude = FMath::Sqrt(FMath::Square(BaseVectorMagnitude) - FMath::Square(OrbitalRadius));
+
+	//finds the tangent from the current position to the orbit
+	float OutX = ( TangentVectorMagnitude * BaseVector.X + OrbitalRadius * BaseVector.Y ) / BaseVectorMagnitude;
+	float OutY = ( TangentVectorMagnitude * BaseVector.Y - OrbitalRadius * BaseVector.X ) / BaseVectorMagnitude;
+	float OutZ = 0;
+
+	FVector OutVector = FVector(OutX, OutY, OutZ);
+
+	if (FMath::IsNearlyZero(OutVector.X, DecreaseSpeedRadius) && FMath::IsNearlyZero(OutVector.Y, DecreaseSpeedRadius)){
+
+		if (CurrentReturnSpeedRatio > SpeedRatioDownBoundary){
+			CurrentReturnSpeedRatio -= (DeltaTime * DeltaTimeMultiplier);
+		}
+	}
+
+	if (FMath::IsNearlyZero(OutVector.X, PullRadius) && FMath::IsNearlyZero(OutVector.Y, PullRadius)){
+		ChangeState();
+		return;
+	}
+
+	OutVector.Normalize();
+	MovementComponent->Velocity = OutVector * MovementComponent->InitialSpeed * CurrentReturnSpeedRatio;
 }
 
 void AMainSign::ContinueOrbitalPath(float DeltaTime) {
@@ -73,20 +106,31 @@ void AMainSign::ContinueOrbitalPath(float DeltaTime) {
 	FVector CharacterLocation = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation();
 
 	//Generate the new location of the pawn relative to the Character Location
-	NewLocation.X = CharacterLocation.X + FMath::Cos(StartAngle + AngularVelocity * RunningTime) * OrbitalRadius;
-	NewLocation.Y = CharacterLocation.Y + FMath::Sin(StartAngle + AngularVelocity * RunningTime) * OrbitalRadius;
+	float CurrentAngle = StartAngle + RunningTime * AngularVelocity;
+
+	NewLocation.X = CharacterLocation.X + FMath::Cos(CurrentAngle) * OrbitalRadius;
+	NewLocation.Y = CharacterLocation.Y + FMath::Sin(CurrentAngle) * OrbitalRadius;
 	NewLocation.Z = CharacterLocation.Z + RelativeHeight;
 	RunningTime += DeltaTime;
 
 	SetActorLocation(NewLocation);
 }
 
+void AMainSign::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (Other != this && OtherComp->IsSimulatingPhysics()) {
+		OtherComp->AddImpulseAtLocation(MovementComponent->Velocity * ImpulseMultiplier, Hit.ImpactPoint);
+	}
+}
+
+
 void AMainSign::InitComponents() {
 	// Our root component will be a sphere that reacts to physics
 	SignCoreComponent = CreateDefaultSubobject<USphereComponent>(TEXT("RootComponent"));
-	SignCoreComponent->BodyInstance.SetCollisionProfileName(TEXT("Projectile"));
-	SignCoreComponent->InitSphereRadius(SignCoreInnerRadius);
 	RootComponent = SignCoreComponent;
+	SignCoreComponent->InitSphereRadius(SignCoreInnerRadius);
+	SignCoreComponent->SetNotifyRigidBodyCollision(true);
+	SignCoreComponent->BodyInstance.SetCollisionProfileName(TEXT("Projectile"));
 
 	// Create and position a mesh component so we can see where our sphere is
 	SignCoreVisual = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SignCoreVisual"));
@@ -110,9 +154,28 @@ void AMainSign::InitComponents() {
 
 	// Create a component that will drive the sign fired movement
 	MovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("SignMovementComponent"));
-	MovementComponent->SetUpdatedComponent(SignCoreComponent);
+	MovementComponent->SetUpdatedComponent(RootComponent);
 	MovementComponent->InitialSpeed = 1000.0f;
 	MovementComponent->MaxSpeed = 1000.0f;
 	MovementComponent->ProjectileGravityScale = 0;
 	MovementComponent->bRotationFollowsVelocity = true;
+	MovementComponent->bShouldBounce = true;
+	MovementComponent->Bounciness = 0.5f;
+}
+
+void AMainSign::InitVariables(){
+
+	OrbitalRadius = 100.0f;
+	AngularVelocity = 3.0f;
+	RelativeHeight = 1.0f;
+	StartAngle = 0.0f;
+	ImpulseMultiplier = 1000.0f;
+	PullRadius = 50.0f;
+	SpeedRatioTopBoundary = 2.0f;
+	SignCoreInnerRadius = 10.0f;
+	MaxFiredTime = 2;
+	SpeedRatioDownBoundary = 0.4f;
+	CurrentReturnSpeedRatio = SpeedRatioTopBoundary;
+	DecreaseSpeedRadius = PullRadius * 5;
+	DeltaTimeMultiplier = 4;
 }
