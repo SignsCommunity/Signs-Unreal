@@ -6,10 +6,12 @@
 
 // Sets default values
 AMainSign::AMainSign() {
-    // Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-    PrimaryActorTick.bCanEverTick = true;
+	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	bReplicateMovement = true;
 
-    InitVariables();
+	InitVariables();
 
 	State = EStateEnum::ROTATING;
 
@@ -18,79 +20,83 @@ AMainSign::AMainSign() {
 
 // Called when the game starts or when spawned
 void AMainSign::BeginPlay() {
-    Super::BeginPlay();
+	Super::BeginPlay();
 
 }
 
 // Called every frame
 void AMainSign::Tick(float DeltaTime) {
-    Super::Tick(DeltaTime);
+	Super::Tick(DeltaTime);
 
-    if (State == EStateEnum::ROTATING){
-		ContinueOrbitalPath(DeltaTime);
-    }
+	if (HasAuthority()) {
 
-    if (State == EStateEnum::RETURNING){
-    	UpdateReturnPath(DeltaTime);
-    }
+		if (State == EStateEnum::ROTATING) {
+			ContinueOrbitalPath(DeltaTime);
+		}
+
+		if (State == EStateEnum::RETURNING) {
+			UpdateReturnPath(DeltaTime);
+		}
+
+	}
 }
 
-void AMainSign::TryFire(FVector Direction){
+void AMainSign::TryFire(FVector Direction) {
 
-    if (State == EStateEnum::ROTATING){
+	if (State == EStateEnum::ROTATING) {
 
-    	State = EStateEnum::FIRED;
+		State = EStateEnum::FIRED;
 
-    	//Velocity fire logic
-    	Direction.Z = 0;
-    	Direction.Normalize();
-    	MovementComponent->Velocity = Direction * MovementComponent->InitialSpeed;
-    	GetWorldTimerManager().SetTimer(FiredTimerHandle, this, &AMainSign::ChangeState, MaxFiredTime, false);
-    }
+		//Velocity fire logic
+		Direction.Z = 0;
+		Direction.Normalize();
+		MovementComponent->Velocity = Direction * MovementComponent->InitialSpeed;
+		GetWorldTimerManager().SetTimer(FiredTimerHandle, this, &AMainSign::ChangeState, MaxFiredTime, false);
+	}
 
 }
 
-void AMainSign::ChangeState(){
+void AMainSign::ChangeState() {
 
-    if (State == EStateEnum::FIRED){
-        State = EStateEnum::RETURNING;
-    }
-    else if (State == EStateEnum::RETURNING){
+	if (State == EStateEnum::FIRED) {
+		State = EStateEnum::RETURNING;
+	}
+	else if (State == EStateEnum::RETURNING) {
 
-		FVector BaseVector = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation() - GetActorLocation();
-    	RunningTime = 0;
+		FVector BaseVector = PlayerCharacterRef->GetActorLocation() - GetActorLocation();
+		RunningTime = 0;
 		StartAngle = FMath::Atan2(BaseVector.Y, BaseVector.X) + PI;
 		MovementComponent->Velocity = FVector(0.0f, 0.0f, 0.0f);
 		CurrentReturnSpeedRatio = SpeedRatioTopBoundary;
 
-        State = EStateEnum::ROTATING;
-    }
+		State = EStateEnum::ROTATING;
+	}
 
 }
 
 void AMainSign::UpdateReturnPath(float DeltaTime) {
 
-	FVector BaseVector = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation() - GetActorLocation();
+	FVector BaseVector = PlayerCharacterRef->GetActorLocation() - GetActorLocation();
 	BaseVector.Z = 0;
 	float BaseVectorMagnitude = BaseVector.Size();
 
 	float TangentVectorMagnitude = FMath::Sqrt(FMath::Square(BaseVectorMagnitude) - FMath::Square(OrbitalRadius));
 
 	//finds the tangent from the current position to the orbit
-	float OutX = ( TangentVectorMagnitude * BaseVector.X + OrbitalRadius * BaseVector.Y ) / BaseVectorMagnitude;
-	float OutY = ( TangentVectorMagnitude * BaseVector.Y - OrbitalRadius * BaseVector.X ) / BaseVectorMagnitude;
+	float OutX = (TangentVectorMagnitude * BaseVector.X + OrbitalRadius * BaseVector.Y) / BaseVectorMagnitude;
+	float OutY = (TangentVectorMagnitude * BaseVector.Y - OrbitalRadius * BaseVector.X) / BaseVectorMagnitude;
 	float OutZ = 0;
 
 	FVector OutVector = FVector(OutX, OutY, OutZ);
 
-	if (FMath::IsNearlyZero(OutVector.X, DecreaseSpeedRadius) && FMath::IsNearlyZero(OutVector.Y, DecreaseSpeedRadius)){
+	if (FMath::IsNearlyZero(OutVector.X, DecreaseSpeedRadius) && FMath::IsNearlyZero(OutVector.Y, DecreaseSpeedRadius)) {
 
-		if (CurrentReturnSpeedRatio > SpeedRatioDownBoundary){
+		if (CurrentReturnSpeedRatio > SpeedRatioDownBoundary) {
 			CurrentReturnSpeedRatio -= (DeltaTime * DeltaTimeMultiplier);
 		}
 	}
 
-	if (FMath::IsNearlyZero(OutVector.X, PullRadius) && FMath::IsNearlyZero(OutVector.Y, PullRadius)){
+	if (FMath::IsNearlyZero(OutVector.X, PullRadius) && FMath::IsNearlyZero(OutVector.Y, PullRadius)) {
 		ChangeState();
 		return;
 	}
@@ -103,7 +109,8 @@ void AMainSign::ContinueOrbitalPath(float DeltaTime) {
 
 	FVector NewLocation = GetActorLocation();
 
-	FVector CharacterLocation = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation();
+	//Cast<CS_Controller>(GetWorld()->GetFirstPlayerController())
+	FVector CharacterLocation = PlayerCharacterRef->GetActorLocation();
 
 	//Generate the new location of the pawn relative to the Character Location
 	float CurrentAngle = StartAngle + RunningTime * AngularVelocity;
@@ -141,6 +148,11 @@ void AMainSign::InitComponents() {
 		SignCoreVisual->SetStaticMesh(SphereVisualAsset.Object);
 		SignCoreVisual->SetWorldScale3D(FVector(SignCoreInnerRadius / 50.0f));
 	}
+	static ConstructorHelpers::FObjectFinder<UMaterial> SignCoreMaterial(TEXT("Material'/Game/StarterContent/Particles/Materials/M_Spark.M_Spark'"));
+	if (SignCoreMaterial.Succeeded())
+	{
+		SignCoreVisual->SetMaterial(0, SignCoreMaterial.Object);
+	}
 
 	// Create a particle system for the Sign's Trail that we can activate or deactivate
 	TrailParticleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("TrailParticles"));
@@ -163,7 +175,7 @@ void AMainSign::InitComponents() {
 	MovementComponent->Bounciness = 0.5f;
 }
 
-void AMainSign::InitVariables(){
+void AMainSign::InitVariables() {
 
 	OrbitalRadius = 100.0f;
 	AngularVelocity = 3.0f;
