@@ -58,6 +58,10 @@ private:
 	UFUNCTION()
 		void ChangeState();
 
+	/** Returns true if the sign is outside of the orbit circle area */
+	UFUNCTION()
+		bool IsOutsideOrbit();
+
 	/**
 	 * Calculates the path when the sign is in a RETURNING state
 	 * @param DeltaTime - taken from Tick()
@@ -132,7 +136,14 @@ public:
 	 * @param Direction - The difference between the cursor location and the player (as vector)
 	 */
 	UFUNCTION(BlueprintCallable, Category=Movement)
-	void TryFire(FVector Direction);
+		void TryFire(FVector Direction);
+
+	/**
+	 * Tries to pull back the sign to rotating state.
+	 * Called on player input.
+	 */
+	UFUNCTION(BlueprintCallable, Category = Movement)
+		void TryPullBack();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	class APlayerCharacter* PlayerCharacterRef;
