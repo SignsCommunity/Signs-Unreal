@@ -2,6 +2,7 @@
 
 #include "PlayerCharacter.h"
 #include "Engine/World.h"
+#include "UObject/ConstructorHelpers.h"
 #include "UnrealNetwork.h"
 
 // Sets default values
@@ -12,7 +13,12 @@ APlayerCharacter::APlayerCharacter()
 	bReplicates = true;
 	bReplicateMovement = true;
 
+	static ConstructorHelpers::FObjectFinder<UBlueprint> MainSignBlueprint(TEXT("Blueprint'/Game/TopDownCPP/Blueprints/BP_Sign.BP_Sign'"));
+	if (MainSignBlueprint.Object) {
+		MainSignBPRef = (UClass*)MainSignBlueprint.Object->GeneratedClass;
+	}
 }
+
 
 // Called when the game starts or when spawned
 void APlayerCharacter::BeginPlay()
@@ -21,8 +27,10 @@ void APlayerCharacter::BeginPlay()
 
 	if (HasAuthority())
 	{
-		MainSignRef = GetWorld()->SpawnActor<AMainSign>(AMainSign::StaticClass(), FVector(0, 0, 0), FRotator(0, 0, 0));
-		MainSignRef->PlayerCharacterRef = this;
+		MainSignRef = GetWorld()->SpawnActor<AMainSign>(MainSignBPRef, FVector(0, 0, 0), FRotator(0, 0, 0));
+		if (MainSignRef) {
+			MainSignRef->PlayerCharacterRef = this;
+		}
 	}
 }
 

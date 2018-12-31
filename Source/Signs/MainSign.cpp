@@ -38,6 +38,10 @@ void AMainSign::Tick(float DeltaTime) {
 			UpdateReturnPath(DeltaTime);
 		}
 
+		//Keep the same Z value
+		FVector Location = GetActorLocation();
+		Location.Z = PlayerCharacterRef->GetActorLocation().Z + RelativeHeight;
+		SetActorLocation(Location);
 	}
 }
 
@@ -54,6 +58,19 @@ void AMainSign::TryFire(FVector Direction) {
 		GetWorldTimerManager().SetTimer(FiredTimerHandle, this, &AMainSign::ChangeState, MaxFiredTime, false);
 	}
 
+}
+
+void AMainSign::TryPullBack() {
+	
+	if (State == EStateEnum::FIRED && IsOutsideOrbit()) {
+		State = EStateEnum::RETURNING;
+	}
+}
+
+bool AMainSign::IsOutsideOrbit() {
+
+	FVector DistanceVector = PlayerCharacterRef->GetActorLocation() - GetActorLocation();
+	return (DistanceVector.Size() > OrbitalRadius);
 }
 
 void AMainSign::ChangeState() {
@@ -109,7 +126,6 @@ void AMainSign::ContinueOrbitalPath(float DeltaTime) {
 
 	FVector NewLocation = GetActorLocation();
 
-	//Cast<CS_Controller>(GetWorld()->GetFirstPlayerController())
 	FVector CharacterLocation = PlayerCharacterRef->GetActorLocation();
 
 	//Generate the new location of the pawn relative to the Character Location
