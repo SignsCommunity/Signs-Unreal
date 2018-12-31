@@ -32,4 +32,5 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category="Sign")
 	class AMainSign* MainSignRef;
 
+	TSubclassOf<class AMainSign> MainSignBPRef;
 };
