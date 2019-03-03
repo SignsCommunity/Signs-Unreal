@@ -13,9 +13,9 @@ APlayerCharacter::APlayerCharacter()
 	bReplicates = true;
 	bReplicateMovement = true;
 
-	static ConstructorHelpers::FObjectFinder<UBlueprint> MainSignBlueprint(TEXT("Blueprint'/Game/TopDownCPP/Blueprints/BP_Sign.BP_Sign'"));
+	static ConstructorHelpers::FObjectFinder<UClass> MainSignBlueprint(TEXT("Blueprint'/Game/TopDownCPP/Blueprints/BP_Sign.BP_Sign_C'"));
 	if (MainSignBlueprint.Object) {
-		MainSignBPRef = (UClass*)MainSignBlueprint.Object->GeneratedClass;
+		MainSignBPRef = (UClass*)MainSignBlueprint.Object;
 	}
 }
 
@@ -55,3 +55,11 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & 
 	DOREPLIFETIME(APlayerCharacter, MainSignRef);
 }
 
+void APlayerCharacter::NotifyHit(UPrimitiveComponent * MyComp, AActor * Other, UPrimitiveComponent * OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult & Hit)
+{
+	if (Other != this && Other->IsA(AMainSign::StaticClass())) {
+		if (HasAuthority()) {
+			//TODO Logic for adding force/impulse on character
+		}
+	}
+}

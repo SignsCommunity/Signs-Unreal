@@ -3,13 +3,17 @@
 #include "MainSign.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "PlayerCharacter.h"
 
 // Sets default values
 AMainSign::AMainSign() {
 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	bReplicates = true;
-	bReplicateMovement = true;
+
+	if (HasAuthority()) {
+		SetReplicates(true);
+		SetReplicateMovement(true);
+	}
 
 	InitVariables();
 
@@ -138,14 +142,6 @@ void AMainSign::ContinueOrbitalPath(float DeltaTime) {
 
 	SetActorLocation(NewLocation);
 }
-
-void AMainSign::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
-{
-	if (Other != this && OtherComp->IsSimulatingPhysics()) {
-		OtherComp->AddImpulseAtLocation(MovementComponent->Velocity * ImpulseMultiplier, Hit.ImpactPoint);
-	}
-}
-
 
 void AMainSign::InitComponents() {
 	// Our root component will be a sphere that reacts to physics
