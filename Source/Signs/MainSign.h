@@ -2,10 +2,11 @@
 
 #pragma once
 
+class APlayerCharacter;
+
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include <EngineClasses.h>
-#include "PlayerCharacter.h"
 #include "MainSign.generated.h"
 
 /**
@@ -68,8 +69,6 @@ private:
 	 */
 	UFUNCTION()
 		void UpdateReturnPath(float DeltaTime);
-
-	virtual void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
 
 	/** The time that the sign is in a fired state (in seconds) */
 	UPROPERTY(EditAnywhere, Category = "FiredState")
@@ -135,7 +134,7 @@ public:
 	 * Checks if the actor can be fired and if so it executes the "fire" logic
 	 * @param Direction - The difference between the cursor location and the player (as vector)
 	 */
-	UFUNCTION(BlueprintCallable, Category=Movement)
+	UFUNCTION(BlueprintCallable, Category = Movement)
 		void TryFire(FVector Direction);
 
 	/**
@@ -146,6 +145,6 @@ public:
 		void TryPullBack();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	class APlayerCharacter* PlayerCharacterRef;
+	APlayerCharacter* PlayerCharacterRef;
 
 };
