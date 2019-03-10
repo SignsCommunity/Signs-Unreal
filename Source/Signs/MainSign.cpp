@@ -192,6 +192,7 @@ void AMainSign::InitVariables() {
 	OrbitalRadius = 100.0f;
 	AngularVelocity = 3.0f;
 	RelativeHeight = 1.0f;
+
 	StartAngle = 0.0f;
 	ImpulseMultiplier = 1000.0f;
 	PullRadius = 50.0f;

@@ -45,4 +45,17 @@ public:
 		FVector NormalImpulse,
 		const FHitResult & Hit
 	);
+	
+private:
+
+	/* Enables all physics properties of the CapsuleComponent */
+	void EnablePhysics();
+	
+	/* Disables all physics properties of the CapsuleComponent */
+	void DisablePhysics();
+
+	UPROPERTY(EditAnywhere)
+	float BounceTime = 2.0f;
+
+	FTimerHandle FiredTimerHandle;
 };

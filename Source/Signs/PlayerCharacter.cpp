@@ -3,6 +3,7 @@
 #include "PlayerCharacter.h"
 #include "Engine/World.h"
 #include "UObject/ConstructorHelpers.h"
+#include "TimerManager.h"
 #include "UnrealNetwork.h"
 
 // Sets default values
@@ -59,7 +60,21 @@ void APlayerCharacter::NotifyHit(UPrimitiveComponent * MyComp, AActor * Other, U
 {
 	if (Other != this && Other->IsA(AMainSign::StaticClass())) {
 		if (HasAuthority()) {
-			//TODO Logic for adding force/impulse on character
+			EnablePhysics();
+			GetCapsuleComponent()->AddImpulseAtLocation(OtherComp->ComponentVelocity * 1000, Hit.ImpactPoint);
+			GetWorldTimerManager().SetTimer(FiredTimerHandle, this, &APlayerCharacter::DisablePhysics, BounceTime, false);
 		}
 	}
+}
+
+void APlayerCharacter::DisablePhysics()
+{
+	GetCapsuleComponent()->SetSimulatePhysics(false);
+	GetCapsuleComponent()->SetCollisionProfileName("CharacterMesh");
+}
+
+void APlayerCharacter::EnablePhysics()
+{
+	GetCapsuleComponent()->SetSimulatePhysics(true);
+	GetCapsuleComponent()->SetCollisionProfileName("Pawn");
 }
