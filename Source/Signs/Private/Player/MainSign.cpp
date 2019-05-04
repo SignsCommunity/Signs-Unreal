@@ -3,6 +3,8 @@
 #include "MainSign.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "UnrealNetwork.h"
+#include "Signs.h"
 #include "PlayerCharacter.h"
 
 // Sets default values
@@ -10,10 +12,8 @@ AMainSign::AMainSign() {
 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	if (HasAuthority()) {
-		SetReplicates(true);
-		SetReplicateMovement(true);
-	}
+	SetReplicates(true);
+	SetReplicateMovement(true);
 
 	InitVariables();
 
@@ -22,33 +22,36 @@ AMainSign::AMainSign() {
 	InitComponents();
 }
 
-// Called when the game starts or when spawned
-void AMainSign::BeginPlay() {
-	Super::BeginPlay();
 
+void AMainSign::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AMainSign, State);
+	DOREPLIFETIME(AMainSign, PlayerCharacterRef);
 }
 
-// Called every frame
+/* [Server] */
 void AMainSign::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
-	if (HasAuthority()) {
-
-		if (State == EStateEnum::ROTATING) {
-			ContinueOrbitalPath(DeltaTime);
-		}
-
-		if (State == EStateEnum::RETURNING) {
-			UpdateReturnPath(DeltaTime);
-		}
-
-		//Keep the same Z value
-		FVector Location = GetActorLocation();
-		Location.Z = PlayerCharacterRef->GetActorLocation().Z + RelativeHeight;
-		SetActorLocation(Location);
+	if (!PlayerCharacterRef) {
+		return;
 	}
+
+	if (State == EStateEnum::ROTATING) {
+		ContinueOrbitalPath(DeltaTime);
+	}
+
+	if (State == EStateEnum::RETURNING) {
+		UpdateReturnPath(DeltaTime);
+	}
+
+	FVector Location = GetActorLocation();
+	Location.Z = PlayerCharacterRef->GetActorLocation().Z + RelativeHeight;
+	SetActorLocation(Location);
 }
 
+/* [Server] */
 void AMainSign::TryFire(FVector Direction) {
 
 	if (State == EStateEnum::ROTATING) {
@@ -59,16 +62,19 @@ void AMainSign::TryFire(FVector Direction) {
 		Direction.Z = 0;
 		Direction.Normalize();
 		MovementComponent->Velocity = Direction * MovementComponent->InitialSpeed;
-		GetWorldTimerManager().SetTimer(FiredTimerHandle, this, &AMainSign::ChangeState, MaxFiredTime, false);
 	}
-
 }
 
+/* [Server] */
 void AMainSign::TryPullBack() {
 	
 	if (State == EStateEnum::FIRED && IsOutsideOrbit()) {
 		State = EStateEnum::RETURNING;
 	}
+}
+
+bool AMainSign::IsReturning() {
+	return (State == EStateEnum::RETURNING);
 }
 
 bool AMainSign::IsOutsideOrbit() {
@@ -92,7 +98,6 @@ void AMainSign::ChangeState() {
 
 		State = EStateEnum::ROTATING;
 	}
-
 }
 
 void AMainSign::UpdateReturnPath(float DeltaTime) {
@@ -151,35 +156,11 @@ void AMainSign::InitComponents() {
 	SignCoreComponent->SetNotifyRigidBodyCollision(true);
 	SignCoreComponent->BodyInstance.SetCollisionProfileName(TEXT("Projectile"));
 
-	// Create and position a mesh component so we can see where our sphere is
-	SignCoreVisual = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SignCoreVisual"));
-	SignCoreVisual->SetupAttachment(RootComponent);
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereVisualAsset(TEXT("/Game/StarterContent/Shapes/Shape_Sphere.Shape_Sphere"));
-	if (SphereVisualAsset.Succeeded())
-	{
-		SignCoreVisual->SetStaticMesh(SphereVisualAsset.Object);
-		SignCoreVisual->SetWorldScale3D(FVector(SignCoreInnerRadius / 50.0f));
-	}
-	static ConstructorHelpers::FObjectFinder<UMaterial> SignCoreMaterial(TEXT("Material'/Game/StarterContent/Particles/Materials/M_Spark.M_Spark'"));
-	if (SignCoreMaterial.Succeeded())
-	{
-		SignCoreVisual->SetMaterial(0, SignCoreMaterial.Object);
-	}
-
-	// Create a particle system for the Sign's Trail that we can activate or deactivate
-	TrailParticleSystem = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("TrailParticles"));
-	TrailParticleSystem->SetupAttachment(SignCoreVisual);
-	TrailParticleSystem->bAutoActivate = true;
-	static ConstructorHelpers::FObjectFinder<UParticleSystem> ParticleAsset(TEXT("/Game/Sign/Particles/P_Trail.P_Trail"));
-	if (ParticleAsset.Succeeded())
-	{
-		TrailParticleSystem->SetTemplate(ParticleAsset.Object);
-	}
 
 	// Create a component that will drive the sign fired movement
 	MovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("SignMovementComponent"));
 	MovementComponent->SetUpdatedComponent(RootComponent);
-	MovementComponent->InitialSpeed = 1000.0f;
+	MovementComponent->InitialSpeed = ImpulseMultiplier;
 	MovementComponent->MaxSpeed = 1000.0f;
 	MovementComponent->ProjectileGravityScale = 0;
 	MovementComponent->bRotationFollowsVelocity = true;
@@ -194,7 +175,6 @@ void AMainSign::InitVariables() {
 	RelativeHeight = 1.0f;
 
 	StartAngle = 0.0f;
-	ImpulseMultiplier = 1000.0f;
 	PullRadius = 50.0f;
 	SpeedRatioTopBoundary = 2.0f;
 	SignCoreInnerRadius = 10.0f;

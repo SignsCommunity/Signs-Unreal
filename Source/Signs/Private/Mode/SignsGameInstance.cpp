@@ -4,6 +4,8 @@
 
 #include <EngineGlobals.h>
 #include <Runtime/Engine/Classes/Engine/Engine.h>
+#include "SimplePlayerController.h"
+#include "Signs.h"
 #include "Runtime/Engine/Classes/GameFramework/PlayerController.h"
 
 USignsGameInstance::USignsGameInstance(const FObjectInitializer & ObjectInitializer) 
@@ -24,7 +26,7 @@ void USignsGameInstance::Host()
 	if (World == nullptr) return;
 
 
-	World->ServerTravel("/Game/TopDownCPP/Maps/TopDownExampleMap?listen");
+	World->ServerTravel("/Game/Levels/Arena/Maps/ArenaMap?listen");
 }
 
 
@@ -39,3 +41,33 @@ void USignsGameInstance::Join(const FString& Address)
 	LocalPlayer->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
 }
 
+
+/* Assigns a team and calls method to spawn player on the Server. */
+void USignsGameInstance::ChooseTeam(const FName& Team)
+{
+
+	GEngine->AddOnScreenDebugMessage(0, 5, FColor::Green, FString::Printf(TEXT("Choosing Team: ")));
+
+	APlayerController* LocalPC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (!ensure(LocalPC != nullptr)) return;
+
+	ASimplePlayerController *SimpleLocalPC = Cast<ASimplePlayerController>(LocalPC);
+	if (!ensure(SimpleLocalPC != nullptr)) return;
+
+
+	GEngine->AddOnScreenDebugMessage(0, 5, FColor::Green, FString::Printf(TEXT("Spawning !!! ")));
+
+	SimpleLocalPC->ServerSpawnPlayer(Team);
+	SimpleLocalPC->Team = Team;
+}
+
+void USignsGameInstance::GetTeam()
+{
+	APlayerController* LocalPC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (!ensure(LocalPC != nullptr)) return;
+
+	ASimplePlayerController *SimpleLocalPC = Cast<ASimplePlayerController>(LocalPC);
+	if (!ensure(SimpleLocalPC != nullptr)) return;
+
+	UE_LOG(LogSigns, Warning, TEXT("My Team: %s"), *SimpleLocalPC->Team.ToString());
+}

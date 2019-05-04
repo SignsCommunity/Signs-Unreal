@@ -6,13 +6,12 @@
 #include "TimerManager.h"
 #include "UnrealNetwork.h"
 #include "Signs.h"
-#include "SimplePlayerState.h"
+#include "SimplePlayerController.h"
+#include "SimpleGameState.h"
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	bReplicateMovement = true;
 
@@ -22,33 +21,29 @@ APlayerCharacter::APlayerCharacter()
 	}
 }
 
-
 // Called when the game starts or when spawned
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (HasAuthority())
-	{
-		MainSignRef = GetWorld()->SpawnActor<AMainSign>(MainSignBPRef, FVector(0, 0, 0), FRotator(0, 0, 0));
+	SpawnSign();
+}
+
+/* [Server] */
+void APlayerCharacter::SpawnSign()
+{
+	if (Role == ROLE_Authority) {
+
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = Instigator;
+
+		MainSignRef = GetWorld()->SpawnActor<AMainSign>(MainSignBPRef, FVector(0, 0, 0), FRotator(0, 0, 0), SpawnParams);
 		if (MainSignRef) {
 			MainSignRef->PlayerCharacterRef = this;
 		}
+
 	}
-}
-
-// Called every frame
-void APlayerCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-
-// Called to bind functionality to input
-void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
 }
 
 void APlayerCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
@@ -58,30 +53,30 @@ void APlayerCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & 
 	DOREPLIFETIME(APlayerCharacter, MainSignRef);
 }
 
+/* [Server] Calls the GameState to add the hit to the score. */
 void APlayerCharacter::NotifyHit(UPrimitiveComponent * MyComp, AActor * Other, UPrimitiveComponent * OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult & Hit)
 {
 	if (Other != this && Other->IsA(AMainSign::StaticClass())) {
-		if (HasAuthority()) {
+
+		AMainSign *hittingSign = Cast<AMainSign>(Other);
+
+		if (hittingSign->IsReturning() || hittingSign->PlayerCharacterRef == this) {
+			return;
+		}
+
+		UE_LOG(LogSigns, Warning, TEXT("Sign's Team = %s"), *hittingSign->Team.ToString());
+
+		if (Role == ROLE_Authority) {
+
+			ASimpleGameState* GameState = Cast<ASimpleGameState>(UGameplayStatics::GetGameState(GetWorld()));
+			if (GameState) {
+				UE_LOG(LogSigns, Warning, TEXT("GameState AddHit Called"));
+				GameState->AddHit(hittingSign->Team);
+			}
+
 			EnablePhysics();
 			GetCapsuleComponent()->AddImpulseAtLocation(OtherComp->ComponentVelocity * 1000, Hit.ImpactPoint);
 			GetWorldTimerManager().SetTimer(FiredTimerHandle, this, &APlayerCharacter::DisablePhysics, BounceTime, false);
-
-			UE_LOG(LogSigns, Warning, TEXT("NotifyHit"));
-
-			if (this->ClientController == nullptr)
-			{
-				UE_LOG(LogSigns, Warning, TEXT("ClientController null"));
-				return;
-			}
-			 
-			if (this->ClientController->PlayerState == nullptr) 
-				UE_LOG(LogSigns, Warning, TEXT("Playerstate null"));
-			
-			ASimplePlayerState* playerState = Cast<ASimplePlayerState>(this->ClientController->PlayerState);
-			if (playerState && Other != this->MainSignRef) {
-				UE_LOG(LogSigns, Warning, TEXT("Cast successful"));
-				playerState->AddHit();
-			}
 		}
 	}
 }
@@ -96,10 +91,4 @@ void APlayerCharacter::EnablePhysics()
 {
 	GetCapsuleComponent()->SetSimulatePhysics(true);
 	GetCapsuleComponent()->SetCollisionProfileName("Pawn");
-}
-
-void APlayerCharacter::SetMyPlayerName(FString name)
-{
-	if(ASimplePlayerState* playerState = GetPlayerState<ASimplePlayerState>())
-		playerState->SetPlayerName(name);
 }

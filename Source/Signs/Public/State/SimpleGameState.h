@@ -14,14 +14,14 @@ class SIGNS_API ASimpleGameState : public AGameState
 {
 	GENERATED_BODY()
 
-//public:
-//	UPROPERTY(Replicated)
-//		int32 TeamAHits;
-//	UPROPERTY(Replicated)
-//		int32 TeamBHits;
-//
-//	void AddHit(bool TeamAHit);
-//
-//	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
+public:
+	UPROPERTY(Replicated, BlueprintReadOnly)
+		int32 TeamAScore;
+	UPROPERTY(Replicated, BlueprintReadOnly)
+		int32 TeamBScore;
+
+	void AddHit(const FName &Team);
+
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 
 };

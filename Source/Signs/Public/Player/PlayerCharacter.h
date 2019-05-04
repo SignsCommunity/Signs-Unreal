@@ -8,6 +8,11 @@
 #include "MainSign.h"
 #include "PlayerCharacter.generated.h"
 
+/**
+ * Contains logic for the player character we controll.
+ * It is extended in a Blueprint where the visual componenets are attached.
+ * It handles spawning of a the sign as well as replicating its reference.
+ */
 UCLASS()
 class SIGNS_API APlayerCharacter : public ACharacter
 {
@@ -22,11 +27,6 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 
@@ -34,9 +34,6 @@ public:
 	class AMainSign* MainSignRef;
 
 	TSubclassOf<class AMainSign> MainSignBPRef;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Controller")
-		AController* ClientController;
 
 	virtual void NotifyHit
 	(
@@ -50,12 +47,6 @@ public:
 		const FHitResult & Hit
 	);
 
-	template<class T>
-	T* GetPlayerState() const { return this->ClientController ? this->ClientController->GetPlayerState<T>() : nullptr; }
-
-	UFUNCTION(Exec)
-		void SetMyPlayerName(FString name);
-	
 private:
 
 	/* Enables all physics properties of the CapsuleComponent */
@@ -69,4 +60,6 @@ private:
 
 	FTimerHandle FiredTimerHandle;
 
+	/* [Server] Spawns MainSign on BeginPlay */
+	void SpawnSign();
 };

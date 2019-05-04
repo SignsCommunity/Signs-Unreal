@@ -20,6 +20,10 @@ enum class EStateEnum : uint8 {
 	IDLE        UMETA(DisplayName = "Idle")
 };
 
+/**
+ * Logic for the main sign that the player controlls.
+ * It has a ProjectileMovementComponent to handle firing the sign.
+ */
 UCLASS()
 class SIGNS_API AMainSign : public AActor
 {
@@ -29,10 +33,6 @@ public:
 	// Sets default values for this pawn's properties
 	AMainSign();
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
 private:
 	/** Creates and initializes the components of the actor */
 	void InitComponents();
@@ -40,12 +40,15 @@ private:
 	/** Initializes the default values for the variables */
 	void InitVariables();
 
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
+
 	float RunningTime;
 
 	/** It multiples the initial speed. Used for lowering the speed when the sign is getting close to the orbit */
 	float CurrentReturnSpeedRatio;
 
-	EStateEnum State;
+	UPROPERTY(Replicated)
+		EStateEnum State;
 
 	FTimerHandle FiredTimerHandle;
 
@@ -117,12 +120,6 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Appearance")
 		USphereComponent *SignCoreComponent;
 
-	UPROPERTY(EditAnywhere, Category = "Appearance")
-		UStaticMeshComponent *SignCoreVisual;
-
-	UPROPERTY(EditAnywhere, Category = "Appearance")
-		UParticleSystemComponent *TrailParticleSystem;
-
 	UPROPERTY(EditAnywhere, Category = Movement)
 		UProjectileMovementComponent *MovementComponent;
 
@@ -144,7 +141,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Movement)
 		void TryPullBack();
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	APlayerCharacter* PlayerCharacterRef;
 
+	bool IsReturning();
+
+	FName Team;
 };
