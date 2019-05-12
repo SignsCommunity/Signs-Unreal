@@ -63,11 +63,11 @@ void APlayerCharacter::NotifyHit(UPrimitiveComponent * MyComp, AActor * Other, U
 		if (hittingSign->IsReturning() || hittingSign->PlayerCharacterRef == this) {
 			return;
 		}
-
 		UE_LOG(LogSigns, Warning, TEXT("Sign's Team = %s"), *hittingSign->Team.ToString());
 
 		if (Role == ROLE_Authority) {
 
+			hittingSign->IncreaseHotStreak();
 			ASimpleGameState* GameState = Cast<ASimpleGameState>(UGameplayStatics::GetGameState(GetWorld()));
 			if (GameState) {
 				UE_LOG(LogSigns, Warning, TEXT("GameState AddHit Called"));
