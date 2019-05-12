@@ -15,11 +15,14 @@ AMainSign::AMainSign() {
 	SetReplicates(true);
 	SetReplicateMovement(true);
 
-	InitVariables();
-
 	State = EStateEnum::ROTATING;
-
 	InitComponents();
+}
+
+void AMainSign::BeginPlay() {
+	Super::BeginPlay();
+
+	InitVariables();
 }
 
 
@@ -28,6 +31,8 @@ void AMainSign::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 
 	DOREPLIFETIME(AMainSign, State);
 	DOREPLIFETIME(AMainSign, PlayerCharacterRef);
+	DOREPLIFETIME(AMainSign, AngularVelocity);
+	DOREPLIFETIME(AMainSign, StartAngle);
 }
 
 /* [Server] */
@@ -38,7 +43,9 @@ void AMainSign::Tick(float DeltaTime) {
 		return;
 	}
 
+
 	if (State == EStateEnum::ROTATING) {
+		Slowdown(DeltaTime);
 		ContinueOrbitalPath(DeltaTime);
 	}
 
@@ -95,6 +102,7 @@ void AMainSign::ChangeState() {
 		StartAngle = FMath::Atan2(BaseVector.Y, BaseVector.X) + PI;
 		MovementComponent->Velocity = FVector(0.0f, 0.0f, 0.0f);
 		CurrentReturnSpeedRatio = SpeedRatioTopBoundary;
+		AngularVelocity = AngularVelocityCap;
 
 		State = EStateEnum::ROTATING;
 	}
@@ -148,6 +156,22 @@ void AMainSign::ContinueOrbitalPath(float DeltaTime) {
 	SetActorLocation(NewLocation);
 }
 
+void AMainSign::TrySwitch() {
+	StartAngle += PI;
+}
+
+void AMainSign::IncreaseHotStreak() {
+	if (AngularVelocity < AngularVelocityCap) {
+		AngularVelocity *= AngularVelocityMultiplier;
+	}
+}
+
+void AMainSign::Slowdown(float DeltaTime) {
+	if (AngularVelocity > StartAngularVelocity) {
+		AngularVelocity -= (DeltaTime * (DeltaTimeMultiplier / 2));
+	}
+}
+
 void AMainSign::InitComponents() {
 	// Our root component will be a sphere that reacts to physics
 	SignCoreComponent = CreateDefaultSubobject<USphereComponent>(TEXT("RootComponent"));
@@ -171,16 +195,19 @@ void AMainSign::InitComponents() {
 void AMainSign::InitVariables() {
 
 	OrbitalRadius = 100.0f;
-	AngularVelocity = 3.0f;
+	StartAngularVelocity = 4.0f;
+	AngularVelocityCap = 5.5f;
 	RelativeHeight = 1.0f;
 
 	StartAngle = 0.0f;
-	PullRadius = 50.0f;
-	SpeedRatioTopBoundary = 2.0f;
+	PullRadius = 110.0f;
+	SpeedRatioTopBoundary = 3.0f;
 	SignCoreInnerRadius = 10.0f;
 	MaxFiredTime = 2;
-	SpeedRatioDownBoundary = 0.4f;
-	CurrentReturnSpeedRatio = SpeedRatioTopBoundary;
-	DecreaseSpeedRadius = PullRadius * 5;
+	SpeedRatioDownBoundary = 1.4f;
+	DecreaseSpeedRadius = 500.0f;
 	DeltaTimeMultiplier = 4;
+
+	AngularVelocity = StartAngularVelocity;
+	CurrentReturnSpeedRatio = SpeedRatioTopBoundary;
 }

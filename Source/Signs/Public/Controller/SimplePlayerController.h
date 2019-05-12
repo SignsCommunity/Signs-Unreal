@@ -47,6 +47,12 @@ private:
 	UFUNCTION(Server, reliable, WithValidation)
 	void ServerTryPull();
 
+	UFUNCTION(Server, reliable, WithValidation)
+	void ServerTrySwitch();
+
+
+	UFUNCTION()
+	void TrySwitch();
 
 	UFUNCTION()
 	void TryFire();

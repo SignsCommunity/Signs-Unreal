@@ -50,6 +50,9 @@ private:
 	UPROPERTY(Replicated)
 		EStateEnum State;
 
+	UPROPERTY(Replicated)
+		float AngularVelocity;
+
 	FTimerHandle FiredTimerHandle;
 
 	/**
@@ -65,6 +68,9 @@ private:
 	/** Returns true if the sign is outside of the orbit circle area */
 	UFUNCTION()
 		bool IsOutsideOrbit();
+
+	UFUNCTION()
+		void Slowdown(float DeltaTime);
 
 	/**
 	 * Calculates the path when the sign is in a RETURNING state
@@ -105,13 +111,20 @@ private:
 		float OrbitalRadius;
 
 	UPROPERTY(EditAnywhere, Category = "RotatingState")
-		float AngularVelocity;
+		float StartAngularVelocity;
 
-	UPROPERTY(EditAnywhere, Category = "RotatingState")
+	UPROPERTY(Replicated, EditAnywhere, Category = "RotatingState")
 		float StartAngle;
 
 	UPROPERTY(EditAnywhere, Category = "RotatingState")
 		float RelativeHeight;
+
+	UPROPERTY(EditAnywhere, Category = "RotatingState")
+		float AngularVelocityCap;
+
+	/* Used when calculating how fast it increases */
+	UPROPERTY(EditAnywhere, Category = "RotatingState")
+		float AngularVelocityMultiplier;
 
 	UPROPERTY(EditAnywhere, Category = "Appearance")
 		float SignCoreInnerRadius;
@@ -127,6 +140,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	virtual void BeginPlay() override;
+
 	/**
 	 * Checks if the actor can be fired and if so it executes the "fire" logic
 	 * @param Direction - The difference between the cursor location and the player (as vector)
@@ -134,6 +149,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Movement)
 		void TryFire(FVector Direction);
 
+
+	UFUNCTION(Category = Movement)
+		void TrySwitch();
 	/**
 	 * Tries to pull back the sign to rotating state.
 	 * Called on player input.
@@ -142,7 +160,10 @@ public:
 		void TryPullBack();
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
-	APlayerCharacter* PlayerCharacterRef;
+		APlayerCharacter* PlayerCharacterRef;
+
+
+	void IncreaseHotStreak();
 
 	bool IsReturning();
 

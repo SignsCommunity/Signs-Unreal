@@ -20,6 +20,7 @@ void ASimplePlayerController::SetupInputComponent()
 	InputComponent->BindAction("SetDestination", IE_Pressed, this, &ASimplePlayerController::MoveToLocation);
 	InputComponent->BindAction("Fire", IE_Pressed, this, &ASimplePlayerController::TryFire);
 	InputComponent->BindAction("Pull", IE_Pressed, this, &ASimplePlayerController::TryPull);
+	InputComponent->BindAction("Switch", IE_Pressed, this, &ASimplePlayerController::TrySwitch);
 }
 
 /* [Server] */
@@ -36,6 +37,14 @@ void ASimplePlayerController::ServerTryPull_Implementation()
 {
 	GET_CONTROLLED_PAWN
 		ControlledPawn->PlayerCharacterRef->MainSignRef->TryPullBack();
+}
+
+/* [Server] */
+bool ASimplePlayerController::ServerTrySwitch_Validate() { return true; }
+void ASimplePlayerController::ServerTrySwitch_Implementation()
+{
+	GET_CONTROLLED_PAWN
+		ControlledPawn->PlayerCharacterRef->MainSignRef->TrySwitch();
 }
 
 /* [Server] */
@@ -68,6 +77,17 @@ void ASimplePlayerController::TryPull()
 	else {
 		GET_CONTROLLED_PAWN
 			ControlledPawn->PlayerCharacterRef->MainSignRef->TryPullBack();
+	}
+}
+
+void ASimplePlayerController::TrySwitch()
+{
+	if (Role < ROLE_Authority) {
+		ServerTrySwitch();
+	}
+	else {
+		GET_CONTROLLED_PAWN
+			ControlledPawn->PlayerCharacterRef->MainSignRef->TrySwitch();
 	}
 }
 
